@@ -10,6 +10,7 @@ type Config struct {
 		Port           string
 		UpdateInterval int
 		Name           string
+		SlaveId        int
 	}
 
 	HTTP struct {

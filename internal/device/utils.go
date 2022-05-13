@@ -1,4 +1,4 @@
-package dev
+package device
 
 import (
 	"encoding/binary"

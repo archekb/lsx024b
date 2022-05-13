@@ -7,7 +7,7 @@ LDFLAGS = "-s -w -X main.version=$(shell git rev-parse HEAD)"
 APP_NAME = $(notdir $(CURDIR))
 
 .PHONY : help \
-         build build_arm32 \
+         build build_arm32v7 build_web_client \
          qemu \
          clean
 .DEFAULT_GOAL : help
@@ -26,10 +26,10 @@ build: ## Build default version of current platform
 
 build_arm32v7: ## Create builder image and Build arm32v7 version of application (use for fast develop)
 	docker buildx build -t $(APP_NAME):linux_arm32v7 --platform linux/arm/v7 .
-	docker run --rm -v $$(pwd):/app --platform linux/arm/7 $(APP_NAME):linux_arm32v7 go build -ldflags=$(LDFLAGS) -o $(APP_NAME) .
+	docker run --rm -v $$(pwd):/app --platform linux/arm/7 $(APP_NAME):linux_arm32v7 go build -ldflags=$(LDFLAGS) -o $(APP_NAME)_arm32v7 .
 
 build_web_client: ## Build web client
-	docker run --rm -v "$$(pwd)/web_src:/app/web_src:ro" -v "$$(pwd)/web:/app/dist" --workdir /app --entrypoint /bin/bash node:16 -c "cp -r web_src/* . && yarn install && yarn build"
+	docker run --rm -v "$$(pwd)/web_src:/app/web_src:ro" -v "$$(pwd)/web:/app/dist" --workdir /app --entrypoint /bin/bash node:16 -c "cp -r web_src/* . && yarn install && yarn build && mv dist/index.html dist/index.htm"
 
 clean: ## Make clean cache
 	-docker rmi $(APP_NAME):default $(APP_NAME):linux_arm32v7 node:16 -f

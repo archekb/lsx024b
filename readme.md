@@ -1,6 +1,21 @@
 # lsx024b
 
-Epsolar LSx024B controler monitor (Web and Home Assistant)
+Epsolar LSx024B controler monitor (Web and Home Assistant).
+
+App will read data from device (every `{Device.Interval}` seconds) and push it to `MQTT` topic `{MQTT.Topic}/{Device.Name}` or (and) show `http(s)://{HTTP.Address}/api/state` you can also use Web client `http(s)://{HTTP.Address}`.
+
+	{
+		"connected": "online",
+		"updated": "2022-05-13T18:23:51.997628484Z",
+		"update_interval": 5,
+		"device": {
+			"rated": { ... },
+			"real_time": { ... },
+			"status": { ... },
+			"statistical": { ... },
+			"settings": { ... }
+		}
+	}
 
 
 ### Configuration ###
@@ -12,11 +27,14 @@ For configuration create `config.yml` (see `example/config.yml`) file and discri
 ### Build ###
 ---
 
-You have two ways for build this project.
+You have two ways for build this project:
 * Install `Go` lang, `Nodejs 12 (14 or 16)`, `yarn` and build manually
 * Use `make` and `Docker`
 
-**Atention!** For update web client you should run web client building before server building, if you use `docker` and `make` new client will added automatically.
+*or download binary from realese section*.
+
+**Attention!** For update web client you should run web client building before server building, if you use `docker` and `make` new client will added automatically.
+
 
 #### Server ####
 ---
@@ -54,11 +72,12 @@ or if you have `make` and `Docker`, you can build without `node` instalation:
 ### Run as service ###
 ---
 
-Add config file and service file to `/opt/lsx024b/` and execute:
+Add config file and service file (see `example/lsx024b.service`) to `/opt/lsx024b/` and create symlink to service:
 
 	sudo ln -s /opt/lsx024b/lsx024b.service /etc/systemd/system/lsx024b.service
 	sudo systemctl enable lsx024b
 	sudo systemctl start lsx024b
+
 
 #### for status: ####
 

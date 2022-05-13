@@ -1,44 +1,55 @@
-package dev
+package device
 
 import (
 	"time"
 
+	"github.com/archekb/lsx024b/internal/models"
 	"github.com/goburrow/modbus"
 	log "github.com/sirupsen/logrus"
 )
 
-type Dev struct {
-	rtu    *modbus.RTUClientHandler
-	client modbus.Client
+type DeviceLSX024B struct {
+	Device
 }
 
-func New(port string) (*Dev, error) {
+func NewLSX024B(port string, id int) *DeviceLSX024B {
 	rtu := modbus.NewRTUClientHandler(port)
-	rtu.SlaveId = 1
+	rtu.SlaveId = byte(id)
 	rtu.BaudRate = 115200
 	rtu.DataBits = 8
 	rtu.Parity = "N"
 	rtu.StopBits = 1
 	rtu.Timeout = 5 * time.Second
 
-	err := rtu.Connect()
-	if err != nil {
-		log.Errorln("RTU Connect: %v", err)
+	if id > 0 && id < 256 {
+		rtu.SlaveId = byte(id)
+	} else {
+		rtu.SlaveId = 1
 	}
 
-	client := modbus.NewClient(rtu)
-	return &Dev{
-		rtu:    rtu,
-		client: client,
-	}, nil
+	return &DeviceLSX024B{Device: Device{rtu: rtu}}
 }
 
-func (d *Dev) Close() {
-	d.rtu.Close()
+func (d *DeviceLSX024B) GetRated() (*models.LSX024BRated, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.LSX024BRated{}
+	if err := FillStruct(&data, d.client.ReadInputRegisters); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return &data, nil
 }
 
-func (d *Dev) ControllerRated() (*ControllerRated, error) {
-	data := ControllerRated{}
+func (d *DeviceLSX024B) GetRealTime() (*models.LSX024BRealTime, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.LSX024BRealTime{}
 	if err := FillStruct(&data, d.client.ReadInputRegisters); err != nil {
 		log.Println(err)
 		return nil, err
@@ -46,8 +57,12 @@ func (d *Dev) ControllerRated() (*ControllerRated, error) {
 	return &data, nil
 }
 
-func (d *Dev) ControllerRealTime() (*ControllerRealTime, error) {
-	data := ControllerRealTime{}
+func (d *DeviceLSX024B) GetStatus() (*models.LSX024BStatus, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.LSX024BStatus{}
 	if err := FillStruct(&data, d.client.ReadInputRegisters); err != nil {
 		log.Println(err)
 		return nil, err
@@ -55,86 +70,101 @@ func (d *Dev) ControllerRealTime() (*ControllerRealTime, error) {
 	return &data, nil
 }
 
-func (d *Dev) ControllerStatus() (*ControllerStatus, error) {
-	data := ControllerStatus{}
+func (d *DeviceLSX024B) GetStatistical() (*models.LSX024BStatistical, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.LSX024BStatistical{}
 	if err := FillStruct(&data, d.client.ReadInputRegisters); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	return &data, nil
 }
 
-func (d *Dev) ControllerStatistical() (*ControllerStatistical, error) {
-	data := ControllerStatistical{}
-	if err := FillStruct(&data, d.client.ReadInputRegisters); err != nil {
-		log.Println(err)
-		return nil, err
+func (d *DeviceLSX024B) GetSettings() (*models.LSX024BSettings, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
 	}
-	return &data, nil
-}
 
-func (d *Dev) ControllerSettings() (*ControllerSettings, error) {
-	data := ControllerSettings{}
+	data := models.LSX024BSettings{}
 	if err := FillStruct(&data, d.client.ReadHoldingRegisters); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	return &data, nil
 }
 
-func (d *Dev) ControllerSwitches() (*ControllerSwitches, error) {
-	data := ControllerSwitches{}
+func (d *DeviceLSX024B) GetSwitches() (*models.LSX024BSwitches, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.LSX024BSwitches{}
 	if err := FillStruct(&data, d.client.ReadCoils); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	return &data, nil
 }
 
-func (d *Dev) ControllerDiscrete() (*ControllerDiscrete, error) {
-	data := ControllerDiscrete{}
+func (d *DeviceLSX024B) GetDiscrete() (*models.LSX024BDiscrete, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.LSX024BDiscrete{}
 	if err := FillStruct(&data, d.client.ReadDiscreteInputs); err != nil {
 		log.Println(err)
 		return nil, err
 	}
+
 	return &data, nil
 }
 
-func (d *Dev) ControllerSummary() (*ControllerSummary, error) {
-	data := ControllerSummary{}
+func (d *DeviceLSX024B) Summary() (*models.SummaryLSX024B, error) {
+	if !d.IsConnected() {
+		return nil, ErrNotConnected
+	}
+
+	data := models.SummaryLSX024B{}
 	var err error
 
-	data.ControllerRated, err = d.ControllerRated()
+	data.LSX024BRated, err = d.GetRated()
 	if err != nil {
 		return nil, err
 	}
 
-	data.ControllerRealTime, err = d.ControllerRealTime()
+	data.LSX024BRealTime, err = d.GetRealTime()
 	if err != nil {
 		return nil, err
 	}
 
-	data.ControllerStatus, err = d.ControllerStatus()
+	data.LSX024BStatus, err = d.GetStatus()
 	if err != nil {
 		return nil, err
 	}
 
-	data.ControllerStatistical, err = d.ControllerStatistical()
+	data.LSX024BStatistical, err = d.GetStatistical()
 	if err != nil {
 		return nil, err
 	}
 
-	data.ControllerSettings, err = d.ControllerSettings()
+	data.LSX024BSettings, err = d.GetSettings()
 	if err != nil {
 		return nil, err
 	}
 
-	// data.ControllerSwitches, err = d.ControllerSwitches()
+	// data.LSX024BSwitches, err = d.GetSwitches()
 	// if err != nil {
 	// 	return nil, err
 	// }
 
-	// data.ControllerDiscrete, err = d.ControllerDiscrete()
+	// data.LSX024BDiscrete, err = d.GetDiscrete()
 	// if err != nil {
 	// 	return nil, err
 	// }
@@ -142,9 +172,9 @@ func (d *Dev) ControllerSummary() (*ControllerSummary, error) {
 	return &data, nil
 }
 
-// func (d *Dev) Test() {
+// func (d *Device) Test() {
 // 	//
-// 	dataDiscrete := ControllerDiscrete{}
+// 	dataDiscrete := models.LSX024BDiscrete{}
 // 	err = FillStruct(&dataDiscrete, client.ReadDiscreteInputs)
 // 	if err != nil {
 // 		log.Println(err)

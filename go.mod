@@ -1,4 +1,4 @@
-module lsx024b
+module github.com/archekb/lsx024b
 
 go 1.16
 

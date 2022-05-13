@@ -1,7 +1,7 @@
 <template>
     <v-card flat class="mx-auto" max-width="1915">
         <v-toolbar color="primary" dark extended flat>
-            <v-toolbar-title>LS{{ this.state?.controller_rated?.output_current_of_load || 'X0' }}24B Monitor</v-toolbar-title>
+            <v-toolbar-title>LS{{ this.items?.rated?.output_current_of_load || 'X0' }}24B Monitor</v-toolbar-title>
         </v-toolbar>
 
         <v-card class="mx-auto" max-width="1020" style="margin-top: -50px;">
@@ -28,7 +28,7 @@
             <v-window v-model="tab">
                 <v-window-item v-for="item, key in items" :key="key" :value="key" style="min-height: 200px; margin: 10px;">
                     <v-card flat>
-                        <ControllerRealTime v-if="key == 'controller_real_time' && modern" :data="item" :nameFormatter="nameFormatter" :unit="unit" />
+                        <ControllerRealTime v-if="key == 'real_time' && modern" :data="item" :nameFormatter="nameFormatter" :unit="unit" />
                         <v-table v-else fixed-header>
                             <thead>
                                 <tr>
@@ -76,7 +76,7 @@ export default {
     },
     data() {
         return {
-            tab: "controller_real_time",
+            tab: "real_time",
             modern: true
         }
     },
@@ -99,7 +99,7 @@ export default {
     },
     computed: {
         items() {
-            return Object.fromEntries(Object.entries(this.state).filter(([a])=> a.includes("controller")))
+            return this.state?.device || {}
         }
     }
  }

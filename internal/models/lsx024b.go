@@ -1,7 +1,7 @@
-package dev
+package models
 
 // This section discribe rated (nominals) of controller (not real only nominals)
-type ControllerRated struct {
+type LSX024BRated struct {
 	InputVoltage float64 `addr:"0x3000" divide:"100" json:"input_voltage"`              // [V] Charging equipment rated input voltage (PV array rated voltage)
 	InputCurrent float64 `addr:"0x3001" divide:"100" json:"input_current"`              // [A] Charging equipment rated input current  (PV array rated current)
 	InputPower   float64 `addr:"0x3003" laddr:"0x3002" divide:"100" json:"input_power"` // [W] Charging equipment rated input power (PV array rated power)
@@ -15,7 +15,7 @@ type ControllerRated struct {
 }
 
 // This section discribe realtime status of controller
-type ControllerRealTime struct {
+type LSX024BRealTime struct {
 	InputVoltage float64 `addr:"0x3100" divide:"100" json:"input_voltage"`              // [V] Charging equipment input voltage (Solar charge controller--PV array voltage)
 	InputCurrent float64 `addr:"0x3101" divide:"100" json:"input_current"`              // [A] Charging equipment input current (Solar charge controller--PV array current)
 	InputPower   float64 `addr:"0x3103" laddr:"0x3102" divide:"100" json:"input_power"` // [W] Charging equipment input power (Solar charge controller--PV array power)
@@ -37,7 +37,7 @@ type ControllerRealTime struct {
 	CurrentSystemVoltage    float64 `addr:"0x311D" divide:"100" json:"current_system_voltage"`    // [V] Current system rated voltage. 1200, 2400, 3600, 4800 represent 12V，24V，36V，48V (Battery's real rated power)
 }
 
-type ControllerStatus struct {
+type LSX024BStatus struct {
 	Battery                     string `addr:"0x3200" bits:"0000000000001111" enum:"00:Normal, 01:Overvolt, 02:Under volt, 03:Low volt disconnect, 04: Fault" json:"battery"`
 	BatteryTemperature          string `addr:"0x3200" bits:"0000000011110000" enum:"00:Normal, 01:Over Temp (higher than the warning settings), 02:Low Temp (lower than the warning settings)" json:"battery_temperature"`
 	BatteryInerternalResistance string `addr:"0x3200" bits:"0000000100000000" enum:"00:Normal, 01:Abnormanl" json:"battery_inerternal_resistance"`
@@ -71,7 +71,7 @@ type ControllerStatus struct {
 }
 
 // Today - 00:00 Refresh every day
-type ControllerStatistical struct {
+type LSX024BStatistical struct {
 	MaximumPVVoltageToday      float64 `addr:"0x3300" divide:"100" json:"maximum_pv_voltage_today"`
 	MinimumPVVoltageToday      float64 `addr:"0x3301" divide:"100" json:"minimum_pv_voltage_today"`
 	MaximumBatteryVoltageToday float64 `addr:"0x3302" divide:"100" json:"maximum_battery_voltage_today"`
@@ -88,7 +88,7 @@ type ControllerStatistical struct {
 	BatteryCurrent             float64 `addr:"0x331C" laddr:"0x331B" divide:"100" json:"battery_current"`             // [A]
 }
 
-type ControllerSettings struct {
+type LSX024BSettings struct {
 	BatteryType            string  `addr:"0x9000" enum:"01:Sealed, 02:GEL, 03:Flooded, 00:User defined"`
 	BatteryRatedCapacity   int     `addr:"0x9001"`              // [AH]
 	TempCompensationCoeff  float64 `addr:"0x9002" divide:"100"` // Range 0-9 [mV/℃/2V]
@@ -152,7 +152,7 @@ type ControllerSettings struct {
 	ManagementModesOfBatteryChargingAndDischarging string `addr:"0x9070" enum:"0:Voltage compensation, 1:SOC"` // Management modes of battery charge and discharge, voltage compensation : 0 and SOC : 1
 }
 
-type ControllerSwitches struct {
+type LSX024BSwitches struct {
 	ChargingDevice            bool `addr:"0x0" mode:"raw"`  // 1 Charging device on 0 Charging device off
 	OutputControlMode         bool `addr:"0x1" mode:"raw"`  // 1 Output control mode manual 0 Output control mode automatic
 	ManualControlTheLoad      bool `addr:"0x2" mode:"raw"`  // When the load is manual mode，1-manual on 0 -manual off
@@ -163,17 +163,7 @@ type ControllerSwitches struct {
 	ClearGeneratingStatistics bool `addr:"0x14" mode:"raw"` // 1 clear. Root privileges to perform
 }
 
-type ControllerDiscrete struct {
+type LSX024BDiscrete struct {
 	OverTemperatureInsideTheDevice string `addr:"0x2000" mode:"raw" enum:"0:Normal, 1:Higher than the over-temperature protection point"` // 1 The temperature inside the controller is higher than the over-temperature protection point. 0 Normal
 	DayNight                       string `addr:"0x200C" mode:"raw" enum:"0:Day, 1:Night"`                                                // 1-Night, 0-Day
-}
-
-type ControllerSummary struct {
-	ControllerRated       *ControllerRated       `json:"controller_rated,omitempty"`
-	ControllerRealTime    *ControllerRealTime    `json:"controller_real_time,omitempty"`
-	ControllerStatus      *ControllerStatus      `json:"controller_status,omitempty"`
-	ControllerStatistical *ControllerStatistical `json:"controller_statistical,omitempty"`
-	ControllerSettings    *ControllerSettings    `json:"controller_settings,omitempty"`
-	ControllerSwitches    *ControllerSwitches    `json:"controller_switches,omitempty"`
-	ControllerDiscrete    *ControllerDiscrete    `json:"controller_discrete,omitempty"`
 }

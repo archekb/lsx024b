@@ -2,12 +2,13 @@ package main
 
 import (
 	"embed"
-	"lsx024b/internal/config"
-	"lsx024b/internal/dev"
-	"lsx024b/internal/http"
-	"lsx024b/internal/mqtt"
-	"strings"
 	"time"
+
+	"github.com/archekb/lsx024b/internal/config"
+	"github.com/archekb/lsx024b/internal/device"
+	"github.com/archekb/lsx024b/internal/http"
+	"github.com/archekb/lsx024b/internal/models"
+	"github.com/archekb/lsx024b/internal/mqtt"
 
 	"os"
 	"os/signal"
@@ -31,110 +32,67 @@ func main() {
 		log.Fatal(err)
 	}
 
-	smallName := strings.ReplaceAll(strings.ToLower(cnf.Device.Name), " ", "_")
-	topicA := mqtt.TopicPrepare(cnf.MQTT.Topic)
-	topicA = append(topicA, smallName)
-	topic := strings.Join(topicA, "/")
-
-	d, err := dev.New(cnf.Device.Port)
-	if err != nil {
+	dev := device.NewLSX024B(cnf.Device.Port, cnf.Device.SlaveId)
+	if dev.Connect() != nil {
 		log.Fatalln(err)
 	}
 
-	var mqttClient *mqtt.MQTT
-	var hd *mqtt.HADevice
+	var mqttClient mqtt.MQTT
 	if cnf.MQTT.Address != "" {
-		cr, err := d.ControllerRated()
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		mqttClient, _ = mqtt.New(cnf.MQTT.Address, cnf.MQTT.User, cnf.MQTT.Password, smallName)
+		mqttClient = mqtt.New(cnf.MQTT.Address, cnf.MQTT.User, cnf.MQTT.Password, cnf.Device.Name)
+		mqttClient.SetTopic(cnf.MQTT.Topic, cnf.Device.Name)
+		mqttClient.Connect()
 
 		if cnf.MQTT.HomeAssistant {
-			hd = mqtt.NewHADevice(cnf.Device.Name, int(cr.OutputCurrentOfLoad), topic)
+			cr, err := dev.GetRated()
+			if err != nil {
+				log.Errorln(err)
+			}
 
-			mqttClient.Publish(hd.GenerateSensor("Input Voltage", "controller_real_time.input_voltage", "voltage", "V"))
-			mqttClient.Publish(hd.GenerateSensor("Input Power", "controller_real_time.input_power", "power", "W"))
-			mqttClient.Publish(hd.GenerateSensor("Input Current", "controller_real_time.input_current", "current", "A"))
-
-			mqttClient.Publish(hd.GenerateSensor("Output Voltage", "controller_real_time.output_voltage", "voltage", "V"))
-			mqttClient.Publish(hd.GenerateSensor("Output Power", "controller_real_time.output_power", "power", "W"))
-			mqttClient.Publish(hd.GenerateSensor("Output Current", "controller_real_time.output_current", "current", "A"))
-
-			mqttClient.Publish(hd.GenerateSensor("Battery", "controller_real_time.battery_soc", "battery", "%"))
-			mqttClient.Publish(hd.GenerateSensor("Battery Status", "controller_status.battery", "", ""))
-			mqttClient.Publish(hd.GenerateSensor("Battery Voltage", "controller_statistical.battery_voltage", "voltage", "V"))
-			mqttClient.Publish(hd.GenerateSensor("Battery Current", "controller_statistical.battery_current", "current", "A"))
-			mqttClient.Publish(hd.GenerateSensor("Battery Temperature", "controller_real_time.battery_temperature", "temperature", "℃"))
-
-			mqttClient.Publish(hd.GenerateSensor("Equipment Temperature", "controller_real_time.equipment_inside_temperature", "temperature", "℃"))
-			mqttClient.Publish(hd.GenerateSensor("Charging", "controller_status.charging_type", "", ""))
+			mqttClient.HAInit(cnf.Device.Name, int(cr.OutputCurrentOfLoad))
+			mqttClient.HAPublishDevice()
 		}
 	}
 
-	type currentState struct {
-		Status   string    `json:"status"`
-		Updated  time.Time `json:"updated"`
-		Interval int       `json:"update_interval"`
-		*dev.ControllerSummary
-	}
-
-	var lastState *currentState
+	var lastRes *models.ResultLSX024B = &models.ResultLSX024B{}
 	stopReadController := make(chan struct{}, 1)
-	prevOutputSource := "output"
 	go func() {
 		ticker := time.Tick(time.Duration(cnf.Device.UpdateInterval) * time.Second)
 		for {
 			select {
 			case <-stopReadController:
 				return
+
 			case <-ticker:
-				dataControllerSummary, err := d.ControllerSummary()
+				dataSummary, err := dev.Summary()
 				if err != nil {
-					lastState = &currentState{Status: "offline", Updated: time.Now().UTC()}
+					lastRes = &models.ResultLSX024B{Connected: "offline", Updated: time.Now().UTC()}
 					log.Println(err)
-					if mqttClient != nil {
-						mqttClient.Publish(topic, lastState)
-					}
+					mqttClient.PublishToDefault(lastRes)
 					continue
 				}
-				lastState = &currentState{Status: "online", Updated: time.Now().UTC(), Interval: cnf.Device.UpdateInterval, ControllerSummary: dataControllerSummary}
+				lastRes = &models.ResultLSX024B{Connected: "online", Updated: time.Now().UTC(), Interval: cnf.Device.UpdateInterval, Device: dataSummary}
 
-				if mqttClient != nil {
-					if dataControllerSummary.ControllerRealTime.OutputCurrent == 0 && dataControllerSummary.ControllerRealTime.LoadCurrent > 0 {
-						if prevOutputSource != "load" {
-							prevOutputSource = "load"
-							mqttClient.Publish(hd.GenerateSensor("Output Power", "controller_real_time.load_power", "power", "W"))
-							mqttClient.Publish(hd.GenerateSensor("Output Current", "controller_real_time.load_current", "current", "A"))
-							mqttClient.Publish(hd.GenerateSensor("Output Voltage", "controller_real_time.load_voltage", "voltage", "V"))
-						}
-					} else {
-						if prevOutputSource != "output" {
-							prevOutputSource = "output"
-							mqttClient.Publish(hd.GenerateSensor("Output Power", "controller_real_time.output_power", "power", "W"))
-							mqttClient.Publish(hd.GenerateSensor("Output Current", "controller_real_time.output_current", "current", "A"))
-							mqttClient.Publish(hd.GenerateSensor("Output Voltage", "controller_real_time.output_voltage", "voltage", "V"))
-						}
-					}
-					mqttClient.Publish(topic, lastState)
-				}
+				mqttClient.HAPublishUpdateDevice(dataSummary.LSX024BRealTime.OutputCurrent, dataSummary.LSX024BRealTime.LoadCurrent)
+				mqttClient.PublishToDefault(lastRes)
 			}
 		}
 	}()
 
 	// server HTTP
-	srvHTTP, err := http.New(&staticFS, &http.Env{
-		State: &lastState,
-	})
-	if err != nil {
-		log.Fatalln(err)
-	}
+	if cnf.HTTP.Address != "" {
+		srvHTTP, err := http.New(&staticFS, &http.Env{
+			State: &lastRes,
+		})
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-	if cnf.HTTP.Certificate != "" && cnf.HTTP.Key != "" {
-		srvHTTP.RunTLS(cnf.HTTP.Address, cnf.HTTP.Certificate, cnf.HTTP.Key)
-	} else {
-		srvHTTP.Run(cnf.HTTP.Address)
+		if cnf.HTTP.Certificate != "" && cnf.HTTP.Key != "" {
+			srvHTTP.RunTLS(cnf.HTTP.Address, cnf.HTTP.Certificate, cnf.HTTP.Key)
+		} else {
+			srvHTTP.Run(cnf.HTTP.Address)
+		}
 	}
 
 	// garceful shutdown
@@ -145,12 +103,10 @@ func main() {
 	log.Println("Shutting down server...")
 	stopReadController <- struct{}{}
 
-	if mqttClient != nil {
-		mqttClient.Publish(topic, currentState{Status: "offline", Updated: time.Now().UTC()})
-		mqttClient.Close()
-	}
+	mqttClient.PublishToDefault(&models.ResultLSX024B{Connected: "offline", Updated: time.Now().UTC()})
+	mqttClient.Close()
 
-	d.Close()
+	dev.Close()
 
 	log.Infoln("Server exiting")
 }

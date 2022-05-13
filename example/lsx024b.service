@@ -1,0 +1,12 @@
+[Unit]
+Description=lsx024b daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/lsx024b
+ExecStart=/opt/lsx024b/lsx024b
+Group=dialout
+
+[Install]
+WantedBy=multi-user.target 

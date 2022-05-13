@@ -1,0 +1,16 @@
+Device:
+  Port: /dev/ttyUSB0
+  UpdateInterval: 10 # read from device inttterval in seconds
+  Name: MyUPS # name which will use for Home Assistant and MQTT topic
+
+HTTP:
+  Address: 0.0.0.0:8080 # address and port configuration
+  # Certificate: cert.crt 
+  # Key: key.key
+
+MQTT:
+  Address: tcp://192.168.0.5:1883 # address and port configuration
+  User: homeassistant # MQTT user 
+  Password: homeassistant # MQTT password
+  Topic: ups/lsx024b/ # MQTT topic for device data in the end will added Device Name 
+  HomeAssistant: true # add Device to Home Assistant

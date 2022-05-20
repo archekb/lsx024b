@@ -2,3 +2,6 @@ go.sum
 lsx024b
 lsx024b_arm32v7
 config.yml
+
+.vscode
+vetur.config.js

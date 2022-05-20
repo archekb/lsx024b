@@ -2,7 +2,6 @@ package device
 
 import (
 	"github.com/goburrow/modbus"
-	log "github.com/sirupsen/logrus"
 )
 
 type Device struct {
@@ -13,7 +12,6 @@ type Device struct {
 func (d *Device) Connect() error {
 	err := d.rtu.Connect()
 	if err != nil {
-		log.Errorln("RTU Connect: %v", err)
 		return err
 	}
 
@@ -22,6 +20,7 @@ func (d *Device) Connect() error {
 }
 
 func (d *Device) Close() {
+	d.client = nil
 	d.rtu.Close()
 }
 

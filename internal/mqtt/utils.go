@@ -1,6 +1,10 @@
 package mqtt
 
-import "strings"
+import (
+	"math/rand"
+	"strings"
+	"time"
+)
 
 func TopicPrepare(topic string) []string {
 	topicSplited := strings.Split(topic, "/")
@@ -14,4 +18,16 @@ func TopicPrepare(topic string) []string {
 	}
 
 	return newTopicSplited
+}
+
+func randSeq(n int) string {
+	var str = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
+
+	rand.Seed(time.Now().UnixNano())
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = str[rand.Intn(len(str))]
+	}
+	return string(b)
 }

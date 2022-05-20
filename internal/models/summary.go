@@ -1,11 +1,12 @@
 package models
 
-type SummaryLSX024B struct {
-	LSX024BRated       *LSX024BRated       `json:"rated,omitempty"`
-	LSX024BRealTime    *LSX024BRealTime    `json:"real_time,omitempty"`
-	LSX024BStatus      *LSX024BStatus      `json:"status,omitempty"`
-	LSX024BStatistical *LSX024BStatistical `json:"statistical,omitempty"`
-	LSX024BSettings    *LSX024BSettings    `json:"settings,omitempty"`
-	LSX024BSwitches    *LSX024BSwitches    `json:"switches,omitempty"`
-	LSX024BDiscrete    *LSX024BDiscrete    `json:"discrete,omitempty"`
+// Summary struct of Data for Epever (Epsolar) Controller LS-B series
+type SummaryLSB struct {
+	Rated       *LSB_Rated       `json:"rated,omitempty"`
+	RealTime    *LSB_RealTime    `json:"real_time,omitempty"`
+	Status      *LSB_Status      `json:"status,omitempty"`
+	Statistical *LSB_Statistical `json:"statistical,omitempty"`
+	Settings    *LSB_Settings    `json:"settings,omitempty"`
+	Switches    *LSB_Switches    `json:"switches,omitempty"`
+	Discrete    *LSB_Discrete    `json:"discrete,omitempty"`
 }

@@ -3,7 +3,7 @@
 # Makefile readme (en): <https://www.gnu.org/software/make/manual/html_node/index.html#SEC_Contents>
 
 SHELL = /bin/sh
-LDFLAGS = "-s -w -X main.version=$(shell git rev-parse HEAD)"
+LDFLAGS = "-s -w -X main.version=$(shell git describe --tags --long)"
 APP_NAME = $(notdir $(CURDIR))
 
 .PHONY : help \
@@ -29,7 +29,10 @@ build_arm32v7: ## Create builder image and Build arm32v7 version of application 
 	docker run --rm -v $$(pwd):/app --platform linux/arm/7 $(APP_NAME):linux_arm32v7 go build -ldflags=$(LDFLAGS) -o $(APP_NAME)_arm32v7 .
 
 build_web_client: ## Build web client
-	docker run --rm -v "$$(pwd)/web_src:/app/web_src:ro" -v "$$(pwd)/web:/app/dist" --workdir /app --entrypoint /bin/bash node:16 -c "cp -r web_src/* . && yarn install && yarn build && mv dist/index.html dist/index.htm"
+	docker run --rm -v "$$(pwd)/web_src:/app" --tmpfs /app/node_modules:exec -v "$$(pwd)/web:/app/dist" --workdir /app --entrypoint /bin/bash node:16 -c "yarn install && yarn build && mv dist/index.html dist/index.htm"
+
+dev_web_client: ## Run develop container
+	docker run --rm -it -v "$$(pwd)/web_src:/app" --tmpfs /app/node_modules:exec --workdir /app -p 8080:8080 --entrypoint /bin/bash node:16 -c "yarn install && yarn serve"
 
 clean: ## Make clean cache
 	-docker rmi $(APP_NAME):default $(APP_NAME):linux_arm32v7 node:16 -f

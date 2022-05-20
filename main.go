@@ -7,54 +7,60 @@ import (
 	"github.com/archekb/lsx024b/internal/config"
 	"github.com/archekb/lsx024b/internal/device"
 	"github.com/archekb/lsx024b/internal/http"
+	"github.com/archekb/lsx024b/internal/log"
 	"github.com/archekb/lsx024b/internal/models"
 	"github.com/archekb/lsx024b/internal/mqtt"
 
 	"os"
 	"os/signal"
 	"syscall"
-
-	log "github.com/sirupsen/logrus"
 )
 
 //go:embed web/*
 var staticFS embed.FS
 
+var version string
+
 func init() {
-	// logger
-	log.SetFormatter(&log.TextFormatter{TimestampFormat: "15-01-2006 15:04:05.000000", FullTimestamp: true, ForceColors: true})
-	log.SetLevel(log.TraceLevel)
+	if version != "" {
+		log.ProductionMode()
+	}
 }
 
 func main() {
+	log.Infof("Starting lsx024b v%s", version)
+
 	cnf, err := config.New("config.yml")
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Configuration error: ", err)
 	}
 
-	dev := device.NewLSX024B(cnf.Device.Port, cnf.Device.SlaveId)
-	if dev.Connect() != nil {
-		log.Fatalln(err)
+	// connect to Device
+	dev := device.NewLSB(cnf.Device.Port, cnf.Device.SlaveId)
+	if err := dev.Connect(); err != nil {
+		log.Fatalf("Can't connect to %s: %s", cnf.Device.Port, err)
 	}
+	log.Infof("Device via %s connected", cnf.Device.Port)
 
+	// connect to MQTT
 	var mqttClient mqtt.MQTT
 	if cnf.MQTT.Address != "" {
 		mqttClient = mqtt.New(cnf.MQTT.Address, cnf.MQTT.User, cnf.MQTT.Password, cnf.Device.Name)
 		mqttClient.SetTopic(cnf.MQTT.Topic, cnf.Device.Name)
-		mqttClient.Connect()
+
+		if err := mqttClient.Connect(); err != nil {
+			log.Fatal("Can't connect to MQTT: ", err)
+		}
+		log.Info("Connected to MQTT server")
 
 		if cnf.MQTT.HomeAssistant {
-			cr, err := dev.GetRated()
-			if err != nil {
-				log.Errorln(err)
-			}
-
-			mqttClient.HAInit(cnf.Device.Name, int(cr.OutputCurrentOfLoad))
+			mqttClient.HAInit(cnf.Device.Name, cnf.Device.Model, version)
 			mqttClient.HAPublishDevice()
 		}
 	}
 
-	var lastRes *models.ResultLSX024B = &models.ResultLSX024B{}
+	// read data from device
+	var lastRes *models.ResultLSB
 	stopReadController := make(chan struct{}, 1)
 	go func() {
 		ticker := time.Tick(time.Duration(cnf.Device.UpdateInterval) * time.Second)
@@ -66,28 +72,28 @@ func main() {
 			case <-ticker:
 				dataSummary, err := dev.Summary()
 				if err != nil {
-					lastRes = &models.ResultLSX024B{Connected: "offline", Updated: time.Now().UTC()}
-					log.Println(err)
-					mqttClient.PublishToDefault(lastRes)
+					log.Error("Error reading data from controller: ", err)
+
+					lastRes = &models.ResultLSB{Connected: "offline", Updated: time.Now().UTC(), Model: cnf.Device.Model}
+					if mqttClient.IsConnected() {
+						mqttClient.PublishToDefault(lastRes)
+					}
 					continue
 				}
-				lastRes = &models.ResultLSX024B{Connected: "online", Updated: time.Now().UTC(), Interval: cnf.Device.UpdateInterval, Device: dataSummary}
 
-				mqttClient.HAPublishUpdateDevice(dataSummary.LSX024BRealTime.OutputCurrent, dataSummary.LSX024BRealTime.LoadCurrent)
-				mqttClient.PublishToDefault(lastRes)
+				lastRes = &models.ResultLSB{Connected: "online", Updated: time.Now().UTC(), Interval: cnf.Device.UpdateInterval, Model: cnf.Device.Model, Device: dataSummary}
+				if mqttClient.IsConnected() {
+					mqttClient.PublishToDefault(lastRes)
+				}
 			}
 		}
 	}()
 
 	// server HTTP
 	if cnf.HTTP.Address != "" {
-		srvHTTP, err := http.New(&staticFS, &http.Env{
-			State: &lastRes,
-		})
-		if err != nil {
-			log.Fatalln(err)
-		}
+		log.Info("Starting HTTP Server")
 
+		srvHTTP := http.New(&staticFS, &http.Env{State: &lastRes, Release: version != ""})
 		if cnf.HTTP.Certificate != "" && cnf.HTTP.Key != "" {
 			srvHTTP.RunTLS(cnf.HTTP.Address, cnf.HTTP.Certificate, cnf.HTTP.Key)
 		} else {
@@ -100,13 +106,14 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	log.Info("Shutting down server...")
 	stopReadController <- struct{}{}
 
-	mqttClient.PublishToDefault(&models.ResultLSX024B{Connected: "offline", Updated: time.Now().UTC()})
-	mqttClient.Close()
-
+	if mqttClient.IsConnected() {
+		mqttClient.PublishToDefault(&models.ResultLSB{Connected: "offline", Updated: time.Now().UTC()})
+		mqttClient.Close()
+	}
 	dev.Close()
 
-	log.Infoln("Server exiting")
+	log.Info("Server exiting")
 }

@@ -1,17 +1,18 @@
 Device:
   Port: /dev/ttyUSB0
-  UpdateInterval: 10 # read from device inttterval in seconds
-  Name: MyUPS # name which will use for Home Assistant and MQTT topic
-  # SlaveId: 1 # ModeBus RTU Slave ID of device, by default 1, can be from 1 to 255
+  Name: SolarController # name which will use for Home Assistant and MQTT topic
+  # Model: LS1024B # model which will use for Home Assistant and Web Interface [default 'LS-B compatible']
+  # UpdateInterval: 10 # read from device interval in seconds [default 10]
+  # SlaveId: 1 # ModeBus RTU Slave ID of device, by default 1, can be from 1 to 247 [default 1]
 
 HTTP:
-  Address: 0.0.0.0:8080 # address and port configuration
-  # Certificate: cert.crt 
+  Address: 0.0.0.0:8080 # http server address should be like "address:port"
+  # Certificate: cert.crt
   # Key: key.key
 
 MQTT:
-  Address: tcp://192.168.0.5:1883 # address and port configuration
-  User: mqtt_user # MQTT user 
-  Password: mqtt_password # MQTT password
-  Topic: ups/lsx024b/ # MQTT topic for device data in the end will added Device Name 
+  Address: tcp://192.168.0.5:1883 # mqtt client address should be like "scheme://address:port" scheme can be "tcp", "ssl" or "ws"
+  User: mqtt_user # MQTT user [optional]
+  Password: mqtt_password # MQTT password [optional]
+  Topic: solar/lsx024b/ # MQTT topic for device data (in the end will added Device Name, like "{MQTT.Topic}/{Device.Name in snake_case}")
   HomeAssistant: true # add Device to Home Assistant

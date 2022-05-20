@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/archekb/lsx024b/internal/log"
 )
 
 func Decode(data []byte) []uint16 {

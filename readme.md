@@ -1,13 +1,18 @@
 # lsx024b
 
-Epsolar LSx024B controler monitor (Web and Home Assistant).
+Epever (Epsolar) Controller Monitor (Web and Home Assistant).
+
+**Expected compatible controller series**: `VS-B`, `Tracer-B`, `Tracer-A`, `iTracer`, `eTracer`
+
+**Confirmed compatible controller series**: `LS-B (LS1024B, LS2024B, LS3024B)`
 
 App will read data from device (every `{Device.Interval}` seconds) and push it to `MQTT` topic `{MQTT.Topic}/{Device.Name}` or (and) show `http(s)://{HTTP.Address}/api/state` you can also use Web client `http(s)://{HTTP.Address}`.
 
 	{
 		"connected": "online",
 		"updated": "2022-05-13T18:23:51.997628484Z",
-		"update_interval": 5,
+		"update_interval": 10,
+		"model": "LS-B compatible",
 		"device": {
 			"rated": { ... },
 			"real_time": { ... },
@@ -53,6 +58,8 @@ if you wanna build version for arm32v7 (Orabge PI, etc) you need qemu emulator y
 	make qemu
 	make build_arm32v7
 
+> **Note!** When you see in console `#0 0.580 exec /bin/sh: exec format error` that's mean you need install qemu.
+
 
 #### Web client ####
 ---
@@ -67,6 +74,10 @@ You have `nodejs 12 / 14 / 16` and `yarn` on your computer, you can build it by 
 or if you have `make` and `Docker`, you can build without `node` instalation:
 
 	make build
+
+> **Note!** You can use development docker container `make dev_web_client`. 
+
+For using JS helper Vetur for VSCode create `vetur.config.js` in root, and set path to project `'./web_src'`. (see reference: https://vuejs.github.io/vetur/reference/#example)
 
 
 ### Run as service ###
@@ -97,4 +108,4 @@ Add config file and service file (see `example/lsx024b.service`) to `/opt/lsx024
 ### More info ###
 ---
 
-Device docs and vendor client(for Windows 7/10) you can fount in `/docs`.
+Device docs you can fount in `/docs`.

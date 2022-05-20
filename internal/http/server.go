@@ -6,14 +6,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/archekb/lsx024b/internal/http/middleware"
+	"github.com/archekb/lsx024b/internal/log"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Env struct {
-	State interface{}
+	Release bool
+	State   interface{}
 }
 
 // HTTPServer
@@ -24,7 +25,11 @@ type HTTPServer struct {
 }
 
 // New make new HTTP Server instance, add routes, middlewares
-func New(staticFS *embed.FS, env *Env) (*HTTPServer, error) {
+func New(staticFS *embed.FS, env *Env) *HTTPServer {
+	if env.Release {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	router := gin.New()
 	hs := &HTTPServer{
 		env:    env,
@@ -34,10 +39,8 @@ func New(staticFS *embed.FS, env *Env) (*HTTPServer, error) {
 		},
 	}
 
-	// gin.SetMode(gin.ReleaseMode)
-
 	// set middlewares
-	hs.router.Use(gin.Logger())
+	hs.router.Use(middleware.Logger())
 	hs.router.Use(gin.Recovery())
 	hs.router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
@@ -73,7 +76,7 @@ func New(staticFS *embed.FS, env *Env) (*HTTPServer, error) {
 		c.JSON(http.StatusOK, hs.env.State)
 	})
 
-	return hs, nil
+	return hs
 }
 
 // Run server

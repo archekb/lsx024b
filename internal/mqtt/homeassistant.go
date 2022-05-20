@@ -7,7 +7,7 @@ import (
 
 const HA_DEFAULT_TOPIC = "homeassistant"
 
-func (c *MQTT) HAInit(name string, model int) {
+func (c *MQTT) HAInit(name, model, version string) {
 	identifier := strings.Join(TopicPrepare(c.topic), "_")
 
 	c.haDevice = &haDevice{
@@ -15,10 +15,10 @@ func (c *MQTT) HAInit(name string, model int) {
 		prevOutputSource: "output",
 		device: &haDeviceDescription{
 			Identifiers:  []string{identifier},
-			Manufacturer: "Epsolar",
-			Model:        fmt.Sprintf("LS%d24B", model),
+			Manufacturer: "Epever (Epsolar)",
+			Model:        model,
 			Name:         name,
-			SW:           "0.0.1",
+			SW:           version,
 		},
 		availability: &haAvailabilityDescription{
 			AvailabilityTopic:    c.topic,
@@ -44,6 +44,10 @@ func (c *MQTT) HAPublishDevice() error {
 	c.Publish(c.haDevice.GenerateSensor("Output Power", "device.real_time.output_power", "power", "W"))
 	c.Publish(c.haDevice.GenerateSensor("Output Current", "device.real_time.output_current", "current", "A"))
 
+	c.Publish(c.haDevice.GenerateSensor("Load Voltage", "device.real_time.load_voltage", "voltage", "V"))
+	c.Publish(c.haDevice.GenerateSensor("Load Power", "device.real_time.load_power", "power", "W"))
+	c.Publish(c.haDevice.GenerateSensor("Load Current", "device.real_time.load_current", "current", "A"))
+
 	c.Publish(c.haDevice.GenerateSensor("Battery", "device.real_time.battery_soc", "battery", "%"))
 	c.Publish(c.haDevice.GenerateSensor("Battery Status", "device.status.battery", "", ""))
 	c.Publish(c.haDevice.GenerateSensor("Battery Voltage", "device.statistical.battery_voltage", "voltage", "V"))
@@ -52,34 +56,6 @@ func (c *MQTT) HAPublishDevice() error {
 
 	c.Publish(c.haDevice.GenerateSensor("Equipment Temperature", "device.real_time.equipment_inside_temperature", "temperature", "℃"))
 	c.Publish(c.haDevice.GenerateSensor("Charging", "device.status.charging_type", "", ""))
-
-	return nil
-}
-
-func (c *MQTT) HAPublishUpdateDevice(outputCurrent, loadCurrent float64) error {
-	if !c.IsConnected() {
-		return ErrNotConnected
-	}
-
-	if c.haDevice == nil {
-		return ErrHANotInit
-	}
-
-	if outputCurrent == 0 && loadCurrent > 0 {
-		if c.haDevice.prevOutputSource != "load" {
-			c.haDevice.prevOutputSource = "load"
-			c.Publish(c.haDevice.GenerateSensor("Output Power", "device.real_time.load_power", "power", "W"))
-			c.Publish(c.haDevice.GenerateSensor("Output Current", "device.real_time.load_current", "current", "A"))
-			c.Publish(c.haDevice.GenerateSensor("Output Voltage", "device.real_time.load_voltage", "voltage", "V"))
-		}
-	} else {
-		if c.haDevice.prevOutputSource != "output" {
-			c.haDevice.prevOutputSource = "output"
-			c.Publish(c.haDevice.GenerateSensor("Output Power", "device.real_time.output_power", "power", "W"))
-			c.Publish(c.haDevice.GenerateSensor("Output Current", "device.real_time.output_current", "current", "A"))
-			c.Publish(c.haDevice.GenerateSensor("Output Voltage", "device.real_time.output_voltage", "voltage", "V"))
-		}
-	}
 
 	return nil
 }

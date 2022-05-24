@@ -33,6 +33,7 @@ export const useControllerStateStore = defineStore('controllerState', {
                 })
                 .catch(e => {
                     this.inProgress = false;
+                    this.state = { ...this.state, connected: false };
                     if (e.request) {
                         this.error = e.message;
                     } else {

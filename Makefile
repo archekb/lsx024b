@@ -8,6 +8,7 @@ APP_NAME = $(notdir $(CURDIR))
 
 .PHONY : help \
          build build_arm32v7 build_web_client \
+		 dev_web_client \
          qemu \
          clean
 .DEFAULT_GOAL : help

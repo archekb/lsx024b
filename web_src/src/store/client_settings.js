@@ -15,7 +15,7 @@ const defaultSettings = {
         "normal": {"from": 0, "to": 7, "description": "The indicator will have a normal color as long as the value is in the range", "unit": "A"},
     },
     "power": {
-        "normal": {"from": 0, "to": 110, "description": "The indicator will have a normal color as long as the value is in the range", "unit": "W"},
+        "normal": {"from": 0, "to": 84, "description": "The indicator will have a normal color as long as the value is in the range", "unit": "W"},
     },
     "temperature": {
         "normal": {"from": 20, "to": 40,  "description": "The indicator will have a normal color as long as the value is in the range", "unit": "℃"},

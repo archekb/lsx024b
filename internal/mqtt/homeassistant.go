@@ -22,7 +22,7 @@ func (c *MQTT) HAInit(name, model, version string) {
 		},
 		availability: &haAvailabilityDescription{
 			AvailabilityTopic:    c.topic,
-			AvailabilityTemplate: "{{ value_json.connected }}",
+			AvailabilityTemplate: "{{ 'online' if value_json.connected else 'offline' }}",
 		},
 	}
 }
@@ -101,11 +101,15 @@ func (had *haDevice) DeviceUID() string {
 	return strings.ReplaceAll(strings.ToLower(had.device.Name), "_", "_")
 }
 
-func (had *haDevice) GenerateSensor(name, jpath, class, unit string) (string, *haSensorDescription) {
+func (had *haDevice) HADeviceTopic() string {
+	return fmt.Sprintf("%s/sensor/%s", HA_DEFAULT_TOPIC, had.DeviceUID())
+}
+
+func (had *haDevice) GenerateSensor(name, jpath, class, unit string) (string, bool, *haSensorDescription) {
 	smallName := strings.ReplaceAll(strings.ToLower(name), " ", "_")
 	haTopic := fmt.Sprintf("%s/sensor/%s/%s/config", HA_DEFAULT_TOPIC, had.DeviceUID(), smallName)
 
-	return haTopic, &haSensorDescription{
+	return haTopic, true, &haSensorDescription{
 		Device:                    had.device,
 		haAvailabilityDescription: *had.availability,
 

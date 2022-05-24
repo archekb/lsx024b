@@ -8,8 +8,9 @@ Epever (Epsolar) Controller Monitor (Web and Home Assistant).
 
 App will read data from device (every `{Device.Interval}` seconds) and push it to `MQTT` topic `{MQTT.Topic}/{Device.Name}` or (and) show `http(s)://{HTTP.Address}/api/state` you can also use Web client `http(s)://{HTTP.Address}`.
 
+```json
 	{
-		"connected": "online",
+		"connected": true,
 		"updated": "2022-05-13T18:23:51.997628484Z",
 		"update_interval": 10,
 		"model": "LS-B compatible",
@@ -21,7 +22,7 @@ App will read data from device (every `{Device.Interval}` seconds) and push it t
 			"settings": { ... }
 		}
 	}
-
+```
 
 ### Configuration ###
 ---
@@ -38,7 +39,9 @@ You have two ways for build this project:
 
 *or download binary from realese section*.
 
-**Attention!** For update web client you should run web client building before server building, if you use `docker` and `make` new client will added automatically.
+NOTE: Set version for production building `go build -s -w -X main.version=1.0` or empty `go build` for Debug log level.
+
+**ATTENTION!** For update web client you should run web client building before server building, if you use `docker` and `make` new client will added automatically.
 
 
 #### Server ####
@@ -46,19 +49,27 @@ You have two ways for build this project:
 
 You have golang on your computer, you can build it by default: 
 
-	go mod download
-	go build
+```shell script
+go mod download
+go build
+```
 
 or if you have `make` and `Docker`, you can build without `golang` instalation: (for your host platform) 
 
-	make build
+```shell script
+make build
+```
 
 if you wanna build version for arm32v7 (Orabge PI, etc) you need qemu emulator you can install it directly `sudo apt install qemu-user-static` or add docker container with emulator by `make qemu`
 
-	make qemu
-	make build_arm32v7
+```shell script
+make qemu
+make build_arm32v7
+```
 
-> **Note!** When you see in console `#0 0.580 exec /bin/sh: exec format error` that's mean you need install qemu.
+> **NOTE!** After reboot you need run `make qemu` again.
+
+> **NOTE!** When you see in console `#0 0.580 exec /bin/sh: exec format error` that's mean you need qemu.
 
 
 #### Web client ####
@@ -66,16 +77,20 @@ if you wanna build version for arm32v7 (Orabge PI, etc) you need qemu emulator y
 
 You have `nodejs 12 / 14 / 16` and `yarn` on your computer, you can build it by default:
 
-	yarn install
-	yarn build
-	rm -rf ../web/*
-	cp -r dist/* ../web/
+```shell script
+yarn install
+yarn build
+rm -rf ../web/*
+cp -r dist/* ../web/
+```
 
 or if you have `make` and `Docker`, you can build without `node` instalation:
 
-	make build
+```shell script
+make build
+```
 
-> **Note!** You can use development docker container `make dev_web_client`. 
+> **NOTE!** You can use development docker container `make dev_web_client`. 
 
 For using JS helper Vetur for VSCode create `vetur.config.js` in root, and set path to project `'./web_src'`. (see reference: https://vuejs.github.io/vetur/reference/#example)
 
@@ -85,25 +100,30 @@ For using JS helper Vetur for VSCode create `vetur.config.js` in root, and set p
 
 Add config file and service file (see `example/lsx024b.service`) to `/opt/lsx024b/` and create symlink to service:
 
-	sudo ln -s /opt/lsx024b/lsx024b.service /etc/systemd/system/lsx024b.service
-	sudo systemctl enable lsx024b
-	sudo systemctl start lsx024b
-
+```shell script
+sudo ln -s /opt/lsx024b/lsx024b.service /etc/systemd/system/lsx024b.service
+sudo systemctl enable lsx024b
+sudo systemctl start lsx024b
+```
 
 #### for status: ####
 
-	sudo systemctl status lsx024b
-
+```shell script
+sudo systemctl status lsx024b
+```
 
 #### for stop ####
 
-	sudo systemctl disable lsx024b
+```shell script
+sudo systemctl disable lsx024b
+```
 
 
 #### for delete service ####
 
-	sudo systemctl disable lsx024b
-
+```shell script
+sudo systemctl disable lsx024b
+```
 
 ### More info ###
 ---

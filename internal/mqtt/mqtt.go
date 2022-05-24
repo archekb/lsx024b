@@ -11,12 +11,15 @@ import (
 )
 
 type MQTT struct {
-	client   mqtt.Client
-	topic    string
-	haDevice *haDevice
+	client    mqtt.Client
+	topic     string
+	haDevice  *haDevice
+	onConnect func()
 }
 
-func New(addr, user, password, clientId string) MQTT {
+func New(addr, user, password, clientId string) *MQTT {
+	m := MQTT{}
+
 	opts := mqtt.NewClientOptions()
 
 	opts.AddBroker(addr)
@@ -34,16 +37,19 @@ func New(addr, user, password, clientId string) MQTT {
 	opts.SetAutoReconnect(true)
 	opts.SetMaxReconnectInterval(2 * time.Minute)
 
+	opts.SetOnConnectHandler(func(c mqtt.Client) {
+		if m.onConnect != nil {
+			m.onConnect()
+		}
+	})
+
 	mqtt.ERROR = log.StandartNamed("MQTT error")
 	mqtt.CRITICAL = log.StandartNamed("MQTT critical")
 	mqtt.WARN = log.StandartNamed("MQTT warning")
 	// mqtt.DEBUG = log.StandartNamed("MQTT debug")
 
-	// opts.SetDefaultPublishHandler(func(client mqtt.Client, msg mqtt.Message) {
-	// 	fmt.Printf("MQTT default publish handler: [%s] -> [%s]", msg.Topic(), string(msg.Payload()))
-	// })
-
-	return MQTT{client: mqtt.NewClient(opts)}
+	m.client = mqtt.NewClient(opts)
+	return &m
 }
 
 func (c *MQTT) Connect() error {
@@ -51,6 +57,7 @@ func (c *MQTT) Connect() error {
 		return token.Error()
 	}
 
+	c.client.OptionsReader()
 	return nil
 }
 
@@ -59,7 +66,7 @@ func (c *MQTT) IsConnected() bool {
 		return false
 	}
 
-	return c.client.IsConnected()
+	return c.client.IsConnectionOpen()
 }
 
 func (c *MQTT) Close() {
@@ -70,7 +77,11 @@ func (c *MQTT) Close() {
 	c.client.Disconnect(0)
 }
 
-func (c *MQTT) SetTopic(topic, name string) {
+func (c *MQTT) SetOnConnect(f func()) {
+	c.onConnect = f
+}
+
+func (c *MQTT) SetDefaultTopic(topic, name string) {
 	smallName := strings.ReplaceAll(strings.ToLower(name), " ", "_")
 	topicSplited := TopicPrepare(topic)
 	topicSplited = append(topicSplited, smallName)
@@ -78,10 +89,10 @@ func (c *MQTT) SetTopic(topic, name string) {
 }
 
 func (c *MQTT) PublishToDefault(message interface{}) error {
-	return c.Publish(c.topic, message)
+	return c.Publish(c.topic, false, message)
 }
 
-func (c *MQTT) Publish(topic string, message interface{}) error {
+func (c *MQTT) Publish(topic string, retained bool, message interface{}) error {
 	if !c.IsConnected() {
 		return ErrNotConnected
 	}
@@ -92,9 +103,8 @@ func (c *MQTT) Publish(topic string, message interface{}) error {
 
 	m, _ := json.Marshal(message)
 
-	t := c.client.Publish(topic, 0, false, string(m))
-	t.Wait()
-	if t.Error() != nil {
+	t := c.client.Publish(topic, 0, retained, string(m))
+	if t.Wait(); t.Error() != nil {
 		log.Error("MQTT Publish error:", t.Error())
 		return t.Error()
 	}

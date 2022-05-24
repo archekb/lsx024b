@@ -43,20 +43,21 @@ func main() {
 	log.Infof("Device via %s connected", cnf.Device.Port)
 
 	// connect to MQTT
-	var mqttClient mqtt.MQTT
+	var mqttClient *mqtt.MQTT
 	if cnf.MQTT.Address != "" {
 		mqttClient = mqtt.New(cnf.MQTT.Address, cnf.MQTT.User, cnf.MQTT.Password, cnf.Device.Name)
-		mqttClient.SetTopic(cnf.MQTT.Topic, cnf.Device.Name)
+		mqttClient.SetDefaultTopic(cnf.MQTT.Topic, cnf.Device.Name)
+
+		if cnf.MQTT.HomeAssistant {
+			mqttClient.HAInit(cnf.Device.Name, cnf.Device.Model, version)
+			mqttClient.SetOnConnect(func() { mqttClient.HAPublishDevice() })
+		}
 
 		if err := mqttClient.Connect(); err != nil {
 			log.Fatal("Can't connect to MQTT: ", err)
 		}
 		log.Info("Connected to MQTT server")
 
-		if cnf.MQTT.HomeAssistant {
-			mqttClient.HAInit(cnf.Device.Name, cnf.Device.Model, version)
-			mqttClient.HAPublishDevice()
-		}
 	}
 
 	// read data from device
@@ -74,15 +75,15 @@ func main() {
 				if err != nil {
 					log.Error("Error reading data from controller: ", err)
 
-					lastRes = &models.ResultLSB{Connected: "offline", Updated: time.Now().UTC(), Model: cnf.Device.Model}
-					if mqttClient.IsConnected() {
+					lastRes = &models.ResultLSB{Updated: time.Now().UTC(), Model: cnf.Device.Model}
+					if mqttClient != nil && mqttClient.IsConnected() {
 						mqttClient.PublishToDefault(lastRes)
 					}
 					continue
 				}
 
-				lastRes = &models.ResultLSB{Connected: "online", Updated: time.Now().UTC(), Interval: cnf.Device.UpdateInterval, Model: cnf.Device.Model, Device: dataSummary}
-				if mqttClient.IsConnected() {
+				lastRes = &models.ResultLSB{Connected: true, Updated: time.Now().UTC(), Interval: cnf.Device.UpdateInterval, Model: cnf.Device.Model, Device: dataSummary}
+				if mqttClient != nil && mqttClient.IsConnected() {
 					mqttClient.PublishToDefault(lastRes)
 				}
 			}
@@ -109,10 +110,11 @@ func main() {
 	log.Info("Shutting down server...")
 	stopReadController <- struct{}{}
 
-	if mqttClient.IsConnected() {
-		mqttClient.PublishToDefault(&models.ResultLSB{Connected: "offline", Updated: time.Now().UTC()})
+	if mqttClient != nil && mqttClient.IsConnected() {
+		mqttClient.PublishToDefault(&models.ResultLSB{Updated: time.Now().UTC(), Model: cnf.Device.Model})
 		mqttClient.Close()
 	}
+
 	dev.Close()
 
 	log.Info("Server exiting")

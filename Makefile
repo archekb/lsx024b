@@ -3,7 +3,8 @@
 # Makefile readme (en): <https://www.gnu.org/software/make/manual/html_node/index.html#SEC_Contents>
 
 SHELL = /bin/sh
-LDFLAGS = "-s -w -X main.version=$(shell git describe --tags --long)"
+VERSION = $(shell echo $$(cat .version)-$$(git rev-parse --short HEAD))
+LDFLAGS = "-s -w -X main.version=$(shell echo $${BUILD_VERSION:-$(VERSION)})"
 APP_NAME = $(notdir $(CURDIR))
 
 .PHONY : help \

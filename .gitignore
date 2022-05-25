@@ -1,6 +1,4 @@
-go.sum
-lsx024b
-lsx024b_arm32v7
+lsx024b*
 config.yml
 
 .vscode

@@ -1,0 +1,56 @@
+name: build-and-release
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Version
+        id: version
+        run: echo "::set-output name=version::$(cat .version)-$(git rev-parse --short HEAD)" 
+
+      - name: Build Web Client
+        run: make build_web_client
+
+      - name: Build x86/amd64 version
+        run: make build
+        env:
+          BUILD_VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Set up QEMU
+        run: make qemu
+
+      - name: Build arm32v7 version
+        run: make build_arm32v7
+
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ steps.version.outputs.version }}
+          path: lsx024b*
+          retention-days: 0
+
+  release:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          files: build-${{ needs.build.outputs.version }}/lsx024b*
+

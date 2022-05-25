@@ -9,19 +9,19 @@ Epever (Epsolar) Controller Monitor (Web and Home Assistant).
 App will read data from device (every `{Device.Interval}` seconds) and push it to `MQTT` topic `{MQTT.Topic}/{Device.Name}` or (and) show `http(s)://{HTTP.Address}/api/state` you can also use Web client `http(s)://{HTTP.Address}`.
 
 ```json
-	{
-		"connected": true,
-		"updated": "2022-05-13T18:23:51.997628484Z",
-		"update_interval": 10,
-		"model": "LS-B compatible",
-		"device": {
-			"rated": { ... },
-			"real_time": { ... },
-			"status": { ... },
-			"statistical": { ... },
-			"settings": { ... }
-		}
+{
+	"connected": true,
+	"updated": "2022-05-13T18:23:51.997628484Z",
+	"update_interval": 10,
+	"model": "LS-B compatible",
+	"device": {
+		"rated": { ... },
+		"real_time": { ... },
+		"status": { ... },
+		"statistical": { ... },
+		"settings": { ... }
 	}
+}
 ```
 
 ### Configuration ###
